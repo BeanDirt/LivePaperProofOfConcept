@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, WallpaperTestSettings!</string>
+    <string name="app_name">Live Wallpaper Test</string>
+    <string name="wallpaper_test">Wallpaper Test</string>
+</resources>
