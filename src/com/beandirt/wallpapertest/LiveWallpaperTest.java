@@ -11,8 +11,11 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.os.Bundle;
 import android.service.wallpaper.WallpaperService;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.SurfaceHolder;
+import android.view.WindowManager;
 
 public class LiveWallpaperTest extends WallpaperService {
 
@@ -23,6 +26,9 @@ public class LiveWallpaperTest extends WallpaperService {
 	private static String TAG = "LiveWallpaperApp";
 	private ExecutorService executor;
 	
+	private static int SCREEN_WIDTH;
+	private static int SCREEN_HEIGHT;
+	
 	@Override 
 	public void onCreate(){
 		super.onCreate();
@@ -31,6 +37,13 @@ public class LiveWallpaperTest extends WallpaperService {
 			bitmaps.add(BitmapFactory.decodeResource(getResources(), resource_ids[i]));
 		}
 		executor = Executors.newSingleThreadExecutor();
+		
+		Log.d(TAG, "width: "+String.valueOf(getWallpaperDesiredMinimumWidth()));
+		Log.d(TAG, "height: "+String.valueOf(getWallpaperDesiredMinimumHeight()));
+		
+		Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+		SCREEN_WIDTH = display.getWidth();
+		SCREEN_HEIGHT = display.getHeight();
 	}
 	
 	@Override
@@ -80,7 +93,7 @@ public class LiveWallpaperTest extends WallpaperService {
 		}
 
 		private void setParallax(float xOffset) {
-			this.xOffset = -(xOffset * (bitmaps.get(counter).getWidth() - 480));
+			this.xOffset = -(xOffset * (bitmaps.get(counter).getWidth() - SCREEN_WIDTH));
 		}
 		
 		@Override
