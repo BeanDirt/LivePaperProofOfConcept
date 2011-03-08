@@ -1,5 +1,10 @@
 package com.beandirt.wallpapertest;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import android.app.WallpaperManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,12 +18,19 @@ public class LiveWallpaperTest extends WallpaperService {
 
 	private int counter = 0;
 	private String location = "sf";
-	private int[] resource_ids = {R.drawable.sf_1,R.drawable.sf_2,R.drawable.sf_3,R.drawable.sf_4};
+	private int[] resource_ids = {R.drawable.sf_2,R.drawable.sf_3,R.drawable.sf_4};
+	private List<Bitmap> bitmaps;
 	private static String TAG = "LiveWallpaperApp";
+	private ExecutorService executor;
 	
 	@Override 
 	public void onCreate(){
 		super.onCreate();
+		bitmaps = new ArrayList<Bitmap>();
+		for (int i = 0; i < resource_ids.length; ++i){
+			bitmaps.add(BitmapFactory.decodeResource(getResources(), resource_ids[i]));
+		}
+		executor = Executors.newSingleThreadExecutor();
 	}
 	
 	@Override
@@ -33,6 +45,8 @@ public class LiveWallpaperTest extends WallpaperService {
 	
 	class TestEngine extends Engine{
 		
+		private float xOffset;
+		
 		TestEngine(){
 			
 		}
@@ -41,7 +55,6 @@ public class LiveWallpaperTest extends WallpaperService {
 		public void onCreate(SurfaceHolder surfaceHolder) {
 			super.onCreate(surfaceHolder);
 			setTouchEventsEnabled(true);
-			Log.d(TAG,"On Create");
 		}
 
 		@Override
@@ -50,14 +63,26 @@ public class LiveWallpaperTest extends WallpaperService {
 		}
 
 		@Override
-		public void onOffsetsChanged(float xOffset, float yOffset,
-				float xOffsetStep, float yOffsetStep, int xPixelOffset,
-				int yPixelOffset) {
+		public void onOffsetsChanged(final float xOffset, final float yOffset,
+				final float xOffsetStep, final float yOffsetStep, final int xPixelOffset,
+				final int yPixelOffset) {
 			super.onOffsetsChanged(xOffset, yOffset, xOffsetStep, yOffsetStep,
 					xPixelOffset, yPixelOffset);
-			Log.d(TAG,"Offsets Changed");
+			Runnable offsetsChangedCommand = new Runnable() {
+				public void run() {
+					if (xOffsetStep != 0f) {
+						setParallax(xOffset);
+					}
+				};
+			};
+			executor.execute(offsetsChangedCommand);
+			drawBitmap();
 		}
 
+		private void setParallax(float xOffset) {
+			this.xOffset = -(xOffset * (bitmaps.get(counter).getWidth() - 480));
+		}
+		
 		@Override
 		public void onSurfaceCreated(SurfaceHolder holder) {
 			super.onSurfaceCreated(holder);
@@ -75,7 +100,9 @@ public class LiveWallpaperTest extends WallpaperService {
 		@Override
 		public Bundle onCommand(String action, int x, int y, int z, Bundle extras, boolean resultRequested) {
 		    if (action.equals(WallpaperManager.COMMAND_TAP)) {
-		        drawBitmap();
+		    	if(counter == bitmaps.size() - 1) counter = 0;
+				else ++counter;
+		    	drawBitmap();
 		    }
 		    return null;
 		}
@@ -84,20 +111,22 @@ public class LiveWallpaperTest extends WallpaperService {
 		public void onVisibilityChanged(boolean visible) {
 			super.onVisibilityChanged(visible);
 			if(visible) Log.d(TAG,"The wallpaper has been made visible");
-			else drawBitmap();
+			else {
+				if(counter == bitmaps.size() - 1) counter = 0;
+				else ++counter;
+				drawBitmap();
+			}
 		}
 		
 		private void drawBitmap(){
-			if(counter == resource_ids.length - 1) counter = 0;
-			else ++counter;
 			final SurfaceHolder holder = getSurfaceHolder();
-			Bitmap bMap = BitmapFactory.decodeResource(getResources(), resource_ids[counter]);
 			Canvas c = new Canvas();
 			c = holder.lockCanvas();
 			c.save();
-			c.drawBitmap(bMap,0,0,null);
+			Log.d(TAG, String.valueOf(this.xOffset));
+			c.drawBitmap(bitmaps.get(counter),this.xOffset,0,null);
 			c.restore();
-			holder.unlockCanvasAndPost(c);			
+			holder.unlockCanvasAndPost(c);
 		}
 	}
 }
